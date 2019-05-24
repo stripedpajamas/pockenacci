@@ -1,0 +1,15 @@
+{
+  "name": "pockenacci",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Peter Squicciarini <stripedpajamas273@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "standard": "^12.0.1"
+  }
+}
