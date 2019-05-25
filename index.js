@@ -151,7 +151,6 @@ class Pockenacci {
 
     // we need to run this operation on all blocks
     for (let idx = 0; idx < this.ciphertext.length; idx++) {
-      // nextCiphertext[idx] = this._newBlock()
       const block = this.ciphertext[idx]
       for (let col = 0; col < this.width; col++) {
         for (let shift = key[col] % this.width; shift > 0; shift--) {
