@@ -29,11 +29,22 @@ function onPermuteColumns (ciphertext) {
   })
 }
 
+function onPermuteRows (ciphertext) {
+  console.log('Permuted rows:')
+  ciphertext.forEach((block, idx) => {
+    console.log('\tBlock %d', idx)
+    block.forEach((line) => {
+      console.log('\t\t', line)
+    })
+  })
+}
+
 const pockenacci = new Pockenacci()
   .onKeyNumbering(onKeyNumbering)
   .onKeyExpansion(onKeyExpansion)
   .onLoadPlaintext(onLoadPlaintext)
   .onPermuteColumns(onPermuteColumns)
+  .onPermuteRows(onPermuteRows)
 
 pockenacci.setKey('SECRET')
 pockenacci.encrypt('THIS IS A SECRET MESSAGE THAT WE NEED TO HIDE we really need to hide it')

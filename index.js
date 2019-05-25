@@ -20,6 +20,7 @@ class Pockenacci {
     this._onKeyExpansion = () => {}
     this._onLoadPlaintext = () => {}
     this._onPermuteColumns = () => {}
+    this._onPermuteRows = () => {}
   }
   onKeyNumbering (fn) {
     utils.assertFunc(fn)
@@ -39,6 +40,11 @@ class Pockenacci {
   onPermuteColumns (fn) {
     utils.assertFunc(fn)
     this._onPermuteColumns = fn
+    return this
+  }
+  onPermuteRows (fn) {
+    utils.assertFunc(fn)
+    this._onPermuteRows = fn
     return this
   }
   setBlockSize (bs) {
@@ -167,7 +173,20 @@ class Pockenacci {
     this._onPermuteColumns(this.ciphertext)
   }
   _permuteRows () {
+    // get second row of key for this operation
+    const key = this.keyBlock.slice(1, 2).pop()
 
+    // we need to run this operation on all blocks
+    for (let idx = 0; idx < this.ciphertext.length; idx++) {
+      const block = this.ciphertext[idx]
+      for (let row = 0; row < this.width; row++) {
+        for (let shift = key[row] % this.width; shift > 0; shift--) {
+          block[row].unshift(block[row].pop())
+        }
+      }
+    }
+
+    this._onPermuteRows(this.ciphertext)
   }
   _substitute () {
 
