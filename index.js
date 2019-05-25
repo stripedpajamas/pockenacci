@@ -2,6 +2,15 @@ const utils = require('./utils')
 
 class Pockenacci {
   constructor () {
+    this.chars = [
+      'A', 'B', 'C', 'D', 'E', 'F',
+      'G', 'H', 'I', 'J', 'K', 'L',
+      'M', 'O', 'P', 'Q', 'R', 'S',
+      'T', 'U', 'V', 'W', 'X', 'Y',
+      'X', 'Z', '0', '1', '2', '3',
+      '4', '5', '6', '7', '8', '9'
+    ]
+    this.charset = new Set(this.chars)
     this.blockSize = 36
     this.width = Math.sqrt(this.blockSize)
     this.key = null
@@ -10,6 +19,7 @@ class Pockenacci {
     this._onKeyNumbering = () => {}
     this._onKeyExpansion = () => {}
     this._onLoadPlaintext = () => {}
+    this._onPermuteColumns = () => {}
   }
   onKeyNumbering (fn) {
     utils.assertFunc(fn)
@@ -24,6 +34,11 @@ class Pockenacci {
   onLoadPlaintext (fn) {
     utils.assertFunc(fn)
     this._onLoadPlaintext = fn
+    return this
+  }
+  onPermuteColumns (fn) {
+    utils.assertFunc(fn)
+    this._onPermuteColumns = fn
     return this
   }
   setBlockSize (bs) {
@@ -42,8 +57,18 @@ class Pockenacci {
     // expand key into keyblock
     this.keyBlock = this._expandKey()
   }
-  loadPlaintext (plaintext) {
-    this.plaintext = this._loadPlaintext(plaintext)
+  encrypt (plaintext) {
+    this._loadPlaintext(plaintext)
+    this._permuteColumns()
+    this._permuteRows()
+    this._substitute()
+    this._calculateMac()
+    const { ciphertext, mac } = this
+
+    return { ciphertext, mac }
+  }
+  _newBlock () {
+    return new Array(this.width).fill(0).map(_ => [])
   }
   _numberKey (keyword) {
     const sortedKey = keyword
@@ -66,9 +91,9 @@ class Pockenacci {
     // a keyblock is a 6x6 array
     // so that the 6-digit keys can be
     // consumed easily
-    let keyBlock = new Array(this.width + 1).fill(0).map(_ => [])
-
+    let keyBlock = this._newBlock()
     // seed the key expansion with the key
+    keyBlock.push([])
     keyBlock[0] = this.key.slice()
 
     // then compute the rest
@@ -105,11 +130,13 @@ class Pockenacci {
     }
 
     this._onLoadPlaintext(ptBlocks)
-    return ptBlocks
+
+    // the blockified plaintext is the beginnings of the ciphertext
+    this.ciphertext = ptBlocks
   }
   _loadBlock (pt) {
     // place this blocksize-length plaintext into a block format
-    const ptBlock = new Array(this.width).fill(0).map(_ => [])
+    const ptBlock = this._newBlock()
     let ptIdx = 0
     for (let row = 0; row < this.width; row++) {
       for (let col = 0; col < this.width; col++) {
@@ -117,6 +144,37 @@ class Pockenacci {
       }
     }
     return ptBlock
+  }
+  _permuteColumns () {
+    // get first row of key for this operation
+    const key = this.keyBlock.slice(0, 1).pop()
+
+    // we need to run this operation on all blocks
+    for (let idx = 0; idx < this.ciphertext.length; idx++) {
+      // nextCiphertext[idx] = this._newBlock()
+      const block = this.ciphertext[idx]
+      for (let col = 0; col < this.width; col++) {
+        for (let shift = key[col] % this.width; shift > 0; shift--) {
+          let prev = block[block.length - 1][col]
+          for (let row = 0; row < this.width; row++) {
+            let temp = block[row][col]
+            block[row][col] = prev
+            prev = temp
+          }
+        }
+      }
+    }
+
+    this._onPermuteColumns(this.ciphertext)
+  }
+  _permuteRows () {
+
+  }
+  _substitute () {
+
+  }
+  _calculateMac () {
+
   }
 }
 
