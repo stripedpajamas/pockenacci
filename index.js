@@ -5,9 +5,9 @@ class Pockenacci {
     this.chars = [
       'A', 'B', 'C', 'D', 'E', 'F',
       'G', 'H', 'I', 'J', 'K', 'L',
-      'M', 'O', 'P', 'Q', 'R', 'S',
-      'T', 'U', 'V', 'W', 'X', 'Y',
-      'X', 'Z', '0', '1', '2', '3',
+      'M', 'N', 'O', 'P', 'Q', 'R',
+      'S', 'T', 'U', 'V', 'W', 'X',
+      'Y', 'Z', '0', '1', '2', '3',
       '4', '5', '6', '7', '8', '9'
     ]
     this.charset = new Set(this.chars)
@@ -21,6 +21,7 @@ class Pockenacci {
     this._onLoadPlaintext = () => {}
     this._onPermuteColumns = () => {}
     this._onPermuteRows = () => {}
+    this._onSubstitute = () => {}
   }
   onKeyNumbering (fn) {
     utils.assertFunc(fn)
@@ -45,6 +46,11 @@ class Pockenacci {
   onPermuteRows (fn) {
     utils.assertFunc(fn)
     this._onPermuteRows = fn
+    return this
+  }
+  onSubstitute (fn) {
+    utils.assertFunc(fn)
+    this._onSubstitute = fn
     return this
   }
   setBlockSize (bs) {
@@ -189,7 +195,23 @@ class Pockenacci {
     this._onPermuteRows(this.ciphertext)
   }
   _substitute () {
+    const key = this.keyBlock.slice(2, 3).pop()
 
+    // iterate through entire block and shift row
+    // according to the current key
+    for (let idx = 0; idx < this.ciphertext.length; idx++) {
+      const block = this.ciphertext[idx]
+      for (let row = 0; row < this.width; row++) {
+        for (let col = 0; col < this.width; col++) {
+          const currentVal = block[row][col]
+          const currentIdx = this.chars.indexOf(currentVal)
+          const subIdx = (currentIdx + key[col]) % this.chars.length
+          block[row][col] = this.chars[subIdx]
+        }
+      }
+    }
+
+    this._onSubstitute(this.ciphertext)
   }
   _calculateMac () {
 
