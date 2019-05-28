@@ -169,7 +169,6 @@ class Pockenacci {
     ]
 
     this.blockSize = 36
-    this.usedKeys = 0
     this.keyBlock = null
   }
   setBlockSize (bs) {
