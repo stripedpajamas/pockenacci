@@ -45,5 +45,11 @@ MAC:
 */
 ```
 
+## todo
+- [x] key expansion
+- [x] encryption
+- [ ] mac checking
+- [ ] decryption
+
 ## License
 MIT
