@@ -1,5 +1,3 @@
-const utils = require('./utils')
-
 class Pockenacci {
   constructor () {
     this.chars = [
