@@ -1,61 +1,22 @@
 const Pockenacci = require('.')
 
-function onKeyNumbering (key) {
-  console.log('Got key numbers:\n\t\t', key)
-}
-
-function onKeyExpansion (keyBlock) {
-  console.log('Got key block:')
-  keyBlock.forEach((line) => { console.log('\t\t', line) })
-}
-
-function onLoadPlaintext (plaintext) {
-  console.log('Loaded initial plaintext:')
-  plaintext.forEach((block, idx) => {
-    console.log('\tBlock %d', idx)
-    block.forEach((line) => {
-      console.log('\t\t', line)
-    })
-  })
-}
-
-function onPermuteColumns (ciphertext) {
-  console.log('Permuted columns:')
-  ciphertext.forEach((block, idx) => {
-    console.log('\tBlock %d', idx)
-    block.forEach((line) => {
-      console.log('\t\t', line)
-    })
-  })
-}
-
-function onPermuteRows (ciphertext) {
-  console.log('Permuted rows:')
-  ciphertext.forEach((block, idx) => {
-    console.log('\tBlock %d', idx)
-    block.forEach((line) => {
-      console.log('\t\t', line)
-    })
-  })
-}
-
-function onSubstitute (ciphertext) {
-  console.log('Substitued:')
-  ciphertext.forEach((block, idx) => {
-    console.log('\tBlock %d', idx)
-    block.forEach((line) => {
-      console.log('\t\t', line)
-    })
-  })
-}
-
 const pockenacci = new Pockenacci()
-  .onKeyNumbering(onKeyNumbering)
-  .onKeyExpansion(onKeyExpansion)
-  .onLoadPlaintext(onLoadPlaintext)
-  .onPermuteColumns(onPermuteColumns)
-  .onPermuteRows(onPermuteRows)
-  .onSubstitute(onSubstitute)
 
 pockenacci.setKey('SECRET')
-pockenacci.encrypt('THIS IS A SECRET MESSAGE THAT WE NEED TO HIDE we really need to hide it')
+
+const { ciphertext, mac } = pockenacci.encrypt(
+  'THIS IS A SECRET MESSAGE THAT WE NEED TO HIDE we really need to hide it'
+)
+
+console.log('CIPHERTEXT:')
+ciphertext.forEach((block) => {
+  block.forEach((line) => {
+    console.log('\t', line)
+  })
+})
+console.log('MAC:')
+mac.forEach((block) => {
+  block.forEach((line) => {
+    console.log('\t', line)
+  })
+})

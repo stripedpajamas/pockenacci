@@ -10,48 +10,14 @@ class Pockenacci {
       'Y', 'Z', '0', '1', '2', '3',
       '4', '5', '6', '7', '8', '9'
     ]
-    this.charset = new Set(this.chars)
+    this.charMap = new Map()
+    this.chars.forEach((char, idx) => { this.charMap.set(char, idx) })
+
     this.blockSize = 36
     this.width = Math.sqrt(this.blockSize)
     this.key = null
 
-    // events to make UI easier
-    this._onKeyNumbering = () => {}
-    this._onKeyExpansion = () => {}
-    this._onLoadPlaintext = () => {}
-    this._onPermuteColumns = () => {}
-    this._onPermuteRows = () => {}
-    this._onSubstitute = () => {}
-  }
-  onKeyNumbering (fn) {
-    utils.assertFunc(fn)
-    this._onKeyNumbering = fn
-    return this
-  }
-  onKeyExpansion (fn) {
-    utils.assertFunc(fn)
-    this._onKeyExpansion = fn
-    return this
-  }
-  onLoadPlaintext (fn) {
-    utils.assertFunc(fn)
-    this._onLoadPlaintext = fn
-    return this
-  }
-  onPermuteColumns (fn) {
-    utils.assertFunc(fn)
-    this._onPermuteColumns = fn
-    return this
-  }
-  onPermuteRows (fn) {
-    utils.assertFunc(fn)
-    this._onPermuteRows = fn
-    return this
-  }
-  onSubstitute (fn) {
-    utils.assertFunc(fn)
-    this._onSubstitute = fn
-    return this
+    this.usedKeys = 0
   }
   setBlockSize (bs) {
     utils.assertNum(bs)
@@ -96,7 +62,6 @@ class Pockenacci {
     for (let el of sortedKey) {
       key[el.idx] = counter++
     }
-    this._onKeyNumbering(key)
     return key
   }
   _expandKey () {
@@ -121,7 +86,6 @@ class Pockenacci {
 
     // remove the original key from the block
     keyBlock = keyBlock.slice(1)
-    this._onKeyExpansion(keyBlock)
     return keyBlock
   }
   _loadPlaintext (plaintext) {
@@ -141,8 +105,6 @@ class Pockenacci {
       )
     }
 
-    this._onLoadPlaintext(ptBlocks)
-
     // the blockified plaintext is the beginnings of the ciphertext
     this.ciphertext = ptBlocks
   }
@@ -157,13 +119,13 @@ class Pockenacci {
     }
     return ptBlock
   }
-  _permuteColumns () {
-    // get first row of key for this operation
-    const key = this.keyBlock.slice(0, 1).pop()
+  _permuteColumns (input = this.ciphertext) {
+    const key = this.keyBlock.slice(this.usedKeys, this.usedKeys + 1).pop()
+    this.usedKeys++
 
     // we need to run this operation on all blocks
-    for (let idx = 0; idx < this.ciphertext.length; idx++) {
-      const block = this.ciphertext[idx]
+    for (let idx = 0; idx < input.length; idx++) {
+      const block = input[idx]
       for (let col = 0; col < this.width; col++) {
         for (let shift = key[col] % this.width; shift > 0; shift--) {
           let prev = block[block.length - 1][col]
@@ -175,27 +137,24 @@ class Pockenacci {
         }
       }
     }
-
-    this._onPermuteColumns(this.ciphertext)
   }
-  _permuteRows () {
-    // get second row of key for this operation
-    const key = this.keyBlock.slice(1, 2).pop()
+  _permuteRows (input = this.ciphertext) {
+    const key = this.keyBlock.slice(this.usedKeys, this.usedKeys + 1).pop()
+    this.usedKeys++
 
     // we need to run this operation on all blocks
-    for (let idx = 0; idx < this.ciphertext.length; idx++) {
-      const block = this.ciphertext[idx]
+    for (let idx = 0; idx < input.length; idx++) {
+      const block = input[idx]
       for (let row = 0; row < this.width; row++) {
         for (let shift = key[row] % this.width; shift > 0; shift--) {
           block[row].unshift(block[row].pop())
         }
       }
     }
-
-    this._onPermuteRows(this.ciphertext)
   }
   _substitute () {
-    const key = this.keyBlock.slice(2, 3).pop()
+    const key = this.keyBlock.slice(this.usedKeys, this.usedKeys + 1).pop()
+    this.usedKeys++
 
     // iterate through entire block and shift row
     // according to the current key
@@ -204,17 +163,49 @@ class Pockenacci {
       for (let row = 0; row < this.width; row++) {
         for (let col = 0; col < this.width; col++) {
           const currentVal = block[row][col]
-          const currentIdx = this.chars.indexOf(currentVal)
+          const currentIdx = this.charMap.get(currentVal)
           const subIdx = (currentIdx + key[col]) % this.chars.length
           block[row][col] = this.chars[subIdx]
         }
       }
     }
+  }
+  _substituteMac () {
+    const key = this.keyBlock.slice(this.usedKeys, this.usedKeys + 1).pop()
+    this.usedKeys++
 
-    this._onSubstitute(this.ciphertext)
+    for (let idx = 0; idx < this.mac.length; idx++) {
+      const block = this.mac[idx]
+      for (let row = 0; row < this.width; row++) {
+        for (let col = 0; col < this.width; col++) {
+          const currentVal = block[row][col]
+          block[row][col] = (currentVal + key[col]) % 10
+        }
+      }
+    }
   }
   _calculateMac () {
+    this._mapCiphertextToKey()
+    this._permuteRows(this.mac)
+    this._permuteColumns(this.mac)
+    this._substituteMac()
+  }
+  _mapCiphertextToKey () {
+    const flattenedKey = this.keyBlock.reduce((acc, line) => acc.concat(line), [])
+    const macBlocks = []
+    for (let idx = 0; idx < this.ciphertext.length; idx++) {
+      const block = this.ciphertext[idx]
+      const mac = this._newBlock()
 
+      for (let row = 0; row < this.width; row++) {
+        for (let col = 0; col < this.width; col++) {
+          mac[row][col] = flattenedKey[this.charMap.get(block[row][col])]
+        }
+      }
+
+      macBlocks.push(mac)
+    }
+    this.mac = macBlocks
   }
 }
 
