@@ -11,12 +11,14 @@ const { ciphertext, mac } = pockenacci.encrypt(
 console.log('CIPHERTEXT:')
 ciphertext.forEach((block) => {
   block.forEach((line) => {
-    console.log('\t', line)
+    console.log('\t', line.join(''))
   })
+  console.log('')
 })
 console.log('MAC:')
 mac.forEach((block) => {
   block.forEach((line) => {
-    console.log('\t', line)
+    console.log('\t', line.join(''))
   })
+  console.log('')
 })
