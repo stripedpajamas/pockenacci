@@ -108,14 +108,14 @@ function blockify (input, blockSize) {
 // input array is mutated
 function permuteColumns (input, key, options = {}) {
   // we need to run this operation on all blocks
-  let cmp = (a, b) => options.reverse ? a >= b : a <= b
+  const cmp = (a, b) => options.reverse ? a >= b : a <= b
   for (let idx = 0; idx < input.length; idx++) {
     const block = input[idx]
     for (let col = 0; col < block.length; col++) {
       for (let shift = key[col] % block.length; shift > 0; shift--) {
-        let top = options.reverse ? block.length - 1 : 0
-        let bottom = options.reverse ? 0 : block.length - 1
-        let inc = options.reverse ? -1 : 1
+        const top = options.reverse ? block.length - 1 : 0
+        const bottom = options.reverse ? 0 : block.length - 1
+        const inc = options.reverse ? -1 : 1
 
         let prev = block[bottom][col]
         for (let row = top; cmp(row, bottom); row += inc) {
@@ -131,8 +131,8 @@ function permuteColumns (input, key, options = {}) {
 // input array is mutated
 function permuteRows (input, key, options = {}) {
   // we need to run this operation on all blocks
-  let get = (arr) => options.reverse ? arr.shift() : arr.pop()
-  let set = (arr, x) => options.reverse ? arr.push(x) : arr.unshift(x)
+  const get = (arr) => options.reverse ? arr.shift() : arr.pop()
+  const set = (arr, x) => options.reverse ? arr.push(x) : arr.unshift(x)
   for (let idx = 0; idx < input.length; idx++) {
     const block = input[idx]
     for (let row = 0; row < block.length; row++) {
@@ -144,9 +144,13 @@ function permuteRows (input, key, options = {}) {
 }
 
 // input array is mutated
-function substitute (input, key, options = { chars: [], macMode: false }) {
+function substitute (input, key, options = { chars: [] }) {
   // iterate through entire block and shift row
   // according to the current key
+  const getSubstitution = (current, key, chars) => options.reverse
+    ? chars[((current - key) + chars.length) % chars.length]
+    : chars[(current + key) % chars.length]
+
   for (let idx = 0; idx < input.length; idx++) {
     const block = input[idx]
     for (let row = 0; row < block.length; row++) {
@@ -157,8 +161,7 @@ function substitute (input, key, options = { chars: [], macMode: false }) {
           continue
         }
         const currentIdx = options.chars.indexOf(currentVal)
-        const subIdx = (currentIdx + key[col]) % options.chars.length
-        block[row][col] = options.chars[subIdx]
+        block[row][col] = getSubstitution(currentIdx, key[col], options.chars)
       }
     }
   }
@@ -246,8 +249,7 @@ function decrypt (ciphertext, mac, keyword, options = {}) {
     throw new Error('invalid ciphertext')
   }
 
-  getNextKey()
-  // substitute(blocks, getNextKey(), { chars, reverse })
+  substitute(blocks, getNextKey(), { chars, reverse })
   permuteRows(blocks, getNextKey(), { reverse })
   permuteColumns(blocks, getNextKey(), { reverse })
 
