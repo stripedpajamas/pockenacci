@@ -59,16 +59,16 @@ function expandKey (key, blockSize) {
 
 function getKeyBlock (keyword, options = {}) {
   // process the provided key into
-  // a key consumable by 
-  const { blockSize } = Object.assign({}, options, DEFAULTS)
+  // a key consumable by pockenacci
+  const { blockSize, reverse } = Object.assign({}, options, DEFAULTS)
   if (keyword.length !== Math.sqrt(blockSize)) {
     throw new Error('keyword must have length ' + Math.sqrt(blockSize))
   }
   const keyBlock = Object.freeze(
     expandKey(numberKey(keyword), blockSize).map(Object.freeze)
   )
-  const { reverse } = options
-  let keyIdx = reverse ? keyBlock.length - 1 : 0
+  // why -4 ? because the last three keys are reserved for MAC creation
+  let keyIdx = reverse ? keyBlock.length - 4 : 0
   
   return {
     getNextKey () { return keyBlock[reverse ? keyIdx-- : keyIdx++] },
@@ -106,14 +106,19 @@ function blockify (input, blockSize) {
 }
 
 // input array is mutated
-function permuteColumns (input, key) {
+function permuteColumns (input, key, options = {}) {
   // we need to run this operation on all blocks
+  let cmp = (a, b) => options.reverse ? a >= b : a <= b
   for (let idx = 0; idx < input.length; idx++) {
     const block = input[idx]
     for (let col = 0; col < block.length; col++) {
       for (let shift = key[col] % block.length; shift > 0; shift--) {
-        let prev = block[block.length - 1][col]
-        for (let row = 0; row < block.length; row++) {
+        let top = options.reverse ? block.length - 1 : 0
+        let bottom = options.reverse ? 0 : block.length - 1
+        let inc = options.reverse ? -1 : 1
+
+        let prev = block[bottom][col]
+        for (let row = top; cmp(row, bottom); row += inc) {
           let temp = block[row][col]
           block[row][col] = prev
           prev = temp
@@ -222,31 +227,37 @@ function decrypt (ciphertext, mac, keyword, options = {}) {
   if (!keyword) throw new Error('cannot decrypt without a key')
 
   // produce key block from keyword
+  const reverse = true
   const { blockSize, chars } = Object.assign({}, options, DEFAULTS)
-  const { getFullKey, getNextKey, getMacKey } = getKeyBlock(keyword, { blockSize })
+  const { getFullKey, getNextKey, getMacKey } = getKeyBlock(keyword, { blockSize, reverse })
 
   const blocks = blockify(ciphertext, blockSize)
   
   // check validity of ciphertext based on mac
-  const macBlocks = calculateMac(blocks, chars, getFullKey(), getMacKey(), { reverse: true })
+  const macBlocks = calculateMac(blocks, chars, getFullKey(), getMacKey(), { reverse })
   const expectedMac = macBlocks
     .map(block => block
       .map(line => line.join(''))
       .join('')
     ).join('')
   if (mac !== expectedMac) {
-    console.log(expectedMac)
     throw new Error('invalid ciphertext')
   }
 
-  // join everything together
-  // const ciphertext = blocks
-  //   .map(block => block
-  //     .map(line => line.join(''))
-  //     .join('')
-  //   ).join('')
+  getNextKey()
+  getNextKey()
+  // substitute(blocks, getNextKey(), { chars, reverse })
+  // permuteRows(blocks, getNextKey(), { reverse })
+  permuteColumns(blocks, getNextKey(), { reverse })
 
-  return { plaintext: null }
+  // join everything together
+  const plaintext = blocks
+    .map(block => block
+      .map(line => line.join(''))
+      .join('')
+    ).join('')
+
+  return { plaintext }
 }
 
 module.exports = { encrypt, decrypt }
