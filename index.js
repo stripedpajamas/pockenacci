@@ -1,3 +1,15 @@
+const DEFAULTS = {
+  blockSize: 36,
+  chars: [
+    'A', 'B', 'C', 'D', 'E', 'F',
+    'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R',
+    'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', '0', '1', '2', '3',
+    '4', '5', '6', '7', '8', '9'
+  ]
+}
+
 function newBlock (blockSize) {
   return new Array(Math.sqrt(blockSize)).fill(0).map(_ => [])
 }
@@ -157,74 +169,47 @@ function calculateMac (input, chars, fullKeyBlock, remainingKeys) {
   return macBlocks
 }
 
-class Pockenacci {
-  constructor () {
-    this.chars = [
-      'A', 'B', 'C', 'D', 'E', 'F',
-      'G', 'H', 'I', 'J', 'K', 'L',
-      'M', 'N', 'O', 'P', 'Q', 'R',
-      'S', 'T', 'U', 'V', 'W', 'X',
-      'Y', 'Z', '0', '1', '2', '3',
-      '4', '5', '6', '7', '8', '9'
-    ]
-
-    this.blockSize = 36
-    this.keyBlock = null
+function getKeyBlock (keyword, options = {}) {
+  // process the provided key into
+  // a key consumable by 
+  const { blockSize } = Object.assign({}, options, DEFAULTS)
+  if (keyword.length !== Math.sqrt(blockSize)) {
+    throw new Error('keyword must have length ' + Math.sqrt(blockSize))
   }
-  setBlockSize (bs) {
-    this.blockSize = bs
-    return this
-  }
-  setKey (keyword) {
-    // process the provided key into
-    // a key consumable by Pockenacci
-    if (keyword.length !== Math.sqrt(this.blockSize)) {
-      throw new Error('keyword must have length ' + Math.sqrt(this.blockSize))
-    }
 
-    // expand key into keyblock
-    this.keyBlock = expandKey(numberKey(keyword), this.blockSize)
-    return this
-  }
-  encrypt (plaintext) {
-    if (!this.keyBlock) throw new Error('setKey before encrypting')
+  // expand key into keyblock
+  return expandKey(numberKey(keyword), blockSize)
+}
 
-    const keys = this.keyBlock.slice()
-    const blocks = blockify(plaintext, this.blockSize)
+function encrypt (plaintext, keyword, options = {}) {
+  if (!keyword) throw new Error('cannot encrypt without a key')
 
-    permuteColumns(blocks, keys.shift())
-    permuteRows(blocks, keys.shift())
-    substitute(blocks, keys.shift(), { chars: this.chars })
+  // produce key block from keyword
+  const { blockSize, chars } = Object.assign({}, options, DEFAULTS)
+  const keyBlock = getKeyBlock(keyword, { blockSize })
+  const keys = keyBlock.slice() // to be consumed during encryption
 
-    const macBlocks = calculateMac(blocks, this.chars, this.keyBlock, keys)
+  const blocks = blockify(plaintext, blockSize)
 
+  permuteColumns(blocks, keys.shift())
+  permuteRows(blocks, keys.shift())
+  substitute(blocks, keys.shift(), { chars })
 
-    // join everything together
-    const ciphertext = blocks
-      .map(block => block
-        .map(line => line.join(''))
-        .join('')
-      ).join('')
-    const mac = macBlocks
+  const macBlocks = calculateMac(blocks, chars, keyBlock, keys)
+
+  // join everything together
+  const ciphertext = blocks
     .map(block => block
       .map(line => line.join(''))
       .join('')
     ).join('')
+  const mac = macBlocks
+  .map(block => block
+    .map(line => line.join(''))
+    .join('')
+  ).join('')
 
-    return { ciphertext, mac }
-  }
-  decrypt (ciphertext) {
-    if (!this.keyBlock) throw new Error('setKey before encrypting')
-
-    const keys = this.keyBlock.slice()
-    const blocks = blockify(plaintext, this.blockSize)
-
-    // reverse process of encrypting
-    // TODO make this work
-    substitute(blocks, keys.shift(), { chars: this.chars, reverse: true })
-    permuteRows(blocks, keys.shift(), { reverse: true })
-    permuteColumns(blocks, keys.shift(), { reverse: true })
-  }
+  return { ciphertext, mac }
 }
 
-module.exports = Pockenacci
+module.exports = { encrypt }
