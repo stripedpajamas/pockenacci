@@ -10,4 +10,4 @@ console.log('MAC:\n', mac)
 
 // test decryption
 const { plaintext } = decrypt(ciphertext, mac, 'SECRET')
-console.log('PLAINTEXT:\n', plaintext)
+console.log('PLAINTEXT:\n', plaintext, '(no validation errors)')

@@ -57,6 +57,26 @@ function expandKey (key, blockSize) {
   return keyBlock
 }
 
+function getKeyBlock (keyword, options = {}) {
+  // process the provided key into
+  // a key consumable by 
+  const { blockSize } = Object.assign({}, options, DEFAULTS)
+  if (keyword.length !== Math.sqrt(blockSize)) {
+    throw new Error('keyword must have length ' + Math.sqrt(blockSize))
+  }
+  const keyBlock = Object.freeze(
+    expandKey(numberKey(keyword), blockSize).map(Object.freeze)
+  )
+  const { reverse } = options
+  let keyIdx = reverse ? keyBlock.length - 1 : 0
+  
+  return {
+    getNextKey () { return keyBlock[reverse ? keyIdx-- : keyIdx++] },
+    getFullKey () { return keyBlock },
+    getMacKey () { return keyBlock.slice(-3) }
+  }
+}
+
 function blockify (input, blockSize) {
   // first pad the input to a multiple of the block length
   let pt = input.toUpperCase().replace(/\s/g, '')
@@ -159,12 +179,8 @@ function mapCiphertextToKey (input, chars, keyBlock) {
   return macBlocks
 }
 
-// keys are consumed from remainingKeys (array is modified)
-function calculateMac (input, chars, fullKeyBlock, remainingKeys, options = {}) {
+function calculateMac (input, chars, fullKeyBlock, keys) {
   const macBlocks = mapCiphertextToKey(input, chars, fullKeyBlock)
-  const keys = options.reverse
-    ? [remainingKeys.pop(), remainingKeys.pop(), remainingKeys.pop()].reverse()
-    : [remainingKeys.shift(), remainingKeys.shift(), remainingKeys.shift()]
   permuteRows(macBlocks, keys[0])
   permuteColumns(macBlocks, keys[1])
   substitute(macBlocks, keys[2], { macMode: true })
@@ -172,33 +188,20 @@ function calculateMac (input, chars, fullKeyBlock, remainingKeys, options = {}) 
   return macBlocks
 }
 
-function getKeyBlock (keyword, options = {}) {
-  // process the provided key into
-  // a key consumable by 
-  const { blockSize } = Object.assign({}, options, DEFAULTS)
-  if (keyword.length !== Math.sqrt(blockSize)) {
-    throw new Error('keyword must have length ' + Math.sqrt(blockSize))
-  }
-
-  // expand key into keyblock
-  return expandKey(numberKey(keyword), blockSize)
-}
-
 function encrypt (plaintext, keyword, options = {}) {
   if (!keyword) throw new Error('cannot encrypt without a key')
 
   // produce key block from keyword
   const { blockSize, chars } = Object.assign({}, options, DEFAULTS)
-  const keyBlock = getKeyBlock(keyword, { blockSize })
-  const keys = keyBlock.slice() // to be consumed during encryption
+  const { getFullKey, getNextKey, getMacKey } = getKeyBlock(keyword, { blockSize })
 
   const blocks = blockify(plaintext, blockSize)
 
-  permuteColumns(blocks, keys.shift())
-  permuteRows(blocks, keys.shift())
-  substitute(blocks, keys.shift(), { chars })
+  permuteColumns(blocks, getNextKey())
+  permuteRows(blocks, getNextKey())
+  substitute(blocks, getNextKey(), { chars })
 
-  const macBlocks = calculateMac(blocks, chars, keyBlock, keys)
+  const macBlocks = calculateMac(blocks, chars, getFullKey(), getMacKey())
 
   // join everything together
   const ciphertext = blocks
@@ -220,13 +223,12 @@ function decrypt (ciphertext, mac, keyword, options = {}) {
 
   // produce key block from keyword
   const { blockSize, chars } = Object.assign({}, options, DEFAULTS)
-  const keyBlock = getKeyBlock(keyword, { blockSize })
-  const keys = keyBlock.slice() // to be consumed during decryption
+  const { getFullKey, getNextKey, getMacKey } = getKeyBlock(keyword, { blockSize })
 
   const blocks = blockify(ciphertext, blockSize)
   
   // check validity of ciphertext based on mac
-  const macBlocks = calculateMac(blocks, chars, keyBlock, keys, { reverse: true })
+  const macBlocks = calculateMac(blocks, chars, getFullKey(), getMacKey(), { reverse: true })
   const expectedMac = macBlocks
     .map(block => block
       .map(line => line.join(''))
