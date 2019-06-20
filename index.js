@@ -129,13 +129,15 @@ function permuteColumns (input, key, options = {}) {
 }
 
 // input array is mutated
-function permuteRows (input, key) {
+function permuteRows (input, key, options = {}) {
   // we need to run this operation on all blocks
+  let get = (arr) => options.reverse ? arr.shift() : arr.pop()
+  let set = (arr, x) => options.reverse ? arr.push(x) : arr.unshift(x)
   for (let idx = 0; idx < input.length; idx++) {
     const block = input[idx]
     for (let row = 0; row < block.length; row++) {
       for (let shift = key[row] % block.length; shift > 0; shift--) {
-        block[row].unshift(block[row].pop())
+        set(block[row], get(block[row]))
       }
     }
   }
@@ -245,9 +247,8 @@ function decrypt (ciphertext, mac, keyword, options = {}) {
   }
 
   getNextKey()
-  getNextKey()
   // substitute(blocks, getNextKey(), { chars, reverse })
-  // permuteRows(blocks, getNextKey(), { reverse })
+  permuteRows(blocks, getNextKey(), { reverse })
   permuteColumns(blocks, getNextKey(), { reverse })
 
   // join everything together
