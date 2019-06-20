@@ -8,17 +8,5 @@ const { ciphertext, mac } = pockenacci.encrypt(
   'THIS IS A SECRET MESSAGE THAT WE NEED TO HIDE we really need to hide it'
 )
 
-console.log('CIPHERTEXT:')
-ciphertext.forEach((block) => {
-  block.forEach((line) => {
-    console.log('\t', line.join(''))
-  })
-  console.log('')
-})
-console.log('MAC:')
-mac.forEach((block) => {
-  block.forEach((line) => {
-    console.log('\t', line.join(''))
-  })
-  console.log('')
-})
+console.log('CIPHERTEXT:\n', ciphertext)
+console.log('MAC:\n', mac)

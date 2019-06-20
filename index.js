@@ -45,9 +45,9 @@ function expandKey (key, blockSize) {
   return keyBlock
 }
 
-function blockifyPlaintext (plaintext, blockSize) {
-  // first pad the plaintext to a multiple of the block length
-  let pt = plaintext.toUpperCase().replace(/\s/g, '')
+function blockify (input, blockSize) {
+  // first pad the input to a multiple of the block length
+  let pt = input.toUpperCase().replace(/\s/g, '')
   while (pt.length % blockSize !== 0) {
     pt += 'X'
   }
@@ -190,15 +190,40 @@ class Pockenacci {
     if (!this.keyBlock) throw new Error('setKey before encrypting')
 
     const keys = this.keyBlock.slice()
-    const blocks = blockifyPlaintext(plaintext, this.blockSize)
+    const blocks = blockify(plaintext, this.blockSize)
 
     permuteColumns(blocks, keys.shift())
     permuteRows(blocks, keys.shift())
     substitute(blocks, keys.shift(), { chars: this.chars })
 
-    const mac = calculateMac(blocks, this.chars, this.keyBlock, keys)
+    const macBlocks = calculateMac(blocks, this.chars, this.keyBlock, keys)
 
-    return { ciphertext: blocks, mac }
+
+    // join everything together
+    const ciphertext = blocks
+      .map(block => block
+        .map(line => line.join(''))
+        .join('')
+      ).join('')
+    const mac = macBlocks
+    .map(block => block
+      .map(line => line.join(''))
+      .join('')
+    ).join('')
+
+    return { ciphertext, mac }
+  }
+  decrypt (ciphertext) {
+    if (!this.keyBlock) throw new Error('setKey before encrypting')
+
+    const keys = this.keyBlock.slice()
+    const blocks = blockify(plaintext, this.blockSize)
+
+    // reverse process of encrypting
+    // TODO make this work
+    substitute(blocks, keys.shift(), { chars: this.chars, reverse: true })
+    permuteRows(blocks, keys.shift(), { reverse: true })
+    permuteColumns(blocks, keys.shift(), { reverse: true })
   }
 }
 
