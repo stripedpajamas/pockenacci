@@ -160,11 +160,14 @@ function mapCiphertextToKey (input, chars, keyBlock) {
 }
 
 // keys are consumed from remainingKeys (array is modified)
-function calculateMac (input, chars, fullKeyBlock, remainingKeys) {
+function calculateMac (input, chars, fullKeyBlock, remainingKeys, options = {}) {
   const macBlocks = mapCiphertextToKey(input, chars, fullKeyBlock)
-  permuteRows(macBlocks, remainingKeys.shift())
-  permuteColumns(macBlocks, remainingKeys.shift())
-  substitute(macBlocks, remainingKeys.shift(), { macMode: true })
+  const keys = options.reverse
+    ? [remainingKeys.pop(), remainingKeys.pop(), remainingKeys.pop()].reverse()
+    : [remainingKeys.shift(), remainingKeys.shift(), remainingKeys.shift()]
+  permuteRows(macBlocks, keys[0])
+  permuteColumns(macBlocks, keys[1])
+  substitute(macBlocks, keys[2], { macMode: true })
 
   return macBlocks
 }
@@ -212,4 +215,36 @@ function encrypt (plaintext, keyword, options = {}) {
   return { ciphertext, mac }
 }
 
-module.exports = { encrypt }
+function decrypt (ciphertext, mac, keyword, options = {}) {
+  if (!keyword) throw new Error('cannot decrypt without a key')
+
+  // produce key block from keyword
+  const { blockSize, chars } = Object.assign({}, options, DEFAULTS)
+  const keyBlock = getKeyBlock(keyword, { blockSize })
+  const keys = keyBlock.slice() // to be consumed during decryption
+
+  const blocks = blockify(ciphertext, blockSize)
+  
+  // check validity of ciphertext based on mac
+  const macBlocks = calculateMac(blocks, chars, keyBlock, keys, { reverse: true })
+  const expectedMac = macBlocks
+    .map(block => block
+      .map(line => line.join(''))
+      .join('')
+    ).join('')
+  if (mac !== expectedMac) {
+    console.log(expectedMac)
+    throw new Error('invalid ciphertext')
+  }
+
+  // join everything together
+  // const ciphertext = blocks
+  //   .map(block => block
+  //     .map(line => line.join(''))
+  //     .join('')
+  //   ).join('')
+
+  return { plaintext: null }
+}
+
+module.exports = { encrypt, decrypt }
