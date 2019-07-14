@@ -69,7 +69,7 @@ function getKeyBlock (keyword, options = {}) {
   )
   // why -4 ? because the last three keys are reserved for MAC creation
   let keyIdx = reverse ? keyBlock.length - 4 : 0
-  
+
   return {
     getNextKey () { return keyBlock[reverse ? keyIdx-- : keyIdx++] },
     getFullKey () { return keyBlock },
@@ -220,10 +220,10 @@ function encrypt (plaintext, keyword, options = {}) {
       .join('')
     ).join('')
   const mac = macBlocks
-  .map(block => block
-    .map(line => line.join(''))
-    .join('')
-  ).join('')
+    .map(block => block
+      .map(line => line.join(''))
+      .join('')
+    ).join('')
 
   return { ciphertext, mac }
 }
@@ -237,7 +237,7 @@ function decrypt (ciphertext, mac, keyword, options = {}) {
   const { getFullKey, getNextKey, getMacKey } = getKeyBlock(keyword, { blockSize, reverse })
 
   const blocks = blockify(ciphertext, blockSize)
-  
+
   // check validity of ciphertext based on mac
   const macBlocks = calculateMac(blocks, chars, getFullKey(), getMacKey(), { reverse })
   const expectedMac = macBlocks
