@@ -6,6 +6,10 @@
   "scripts": {
     "test": "standard && ava"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stripedpajamas/pockenacci.git"
+  },
   "keywords": [],
   "author": "Peter Squicciarini <stripedpajamas273@gmail.com>",
   "license": "MIT",
