@@ -38,8 +38,24 @@ function expandKey (key, blockSize) {
   // consumed easily
   let keyBlock = newBlock(blockSize)
   // seed the key expansion with the key
-  keyBlock.push([])
-  keyBlock[0] = key.slice()
+  keyBlock.unshift(key.slice(0, width))
+
+  // if key is longer than sqrt(blocksize)
+  // we need to add those leftovers to the keyblock
+  const leftovers = key.slice(width)
+  let keyBlockRow = 1
+  let keyBlockCol = 0
+  while (leftovers.length) {
+    if (!keyBlock[keyBlockRow]) {
+      keyBlock[keyBlockRow] = []
+    }
+    if (keyBlock[keyBlockRow].length === width) {
+      keyBlockRow++
+      break
+    }
+    keyBlock[keyBlockRow][keyBlockCol] = leftovers.shift()
+    keyBlockCol++
+  }
 
   // then compute the rest
   // add the number above and the number above and to the right
@@ -48,7 +64,9 @@ function expandKey (key, blockSize) {
     for (let col = 0; col < width; col++) {
       let above = keyBlock[row - 1][col]
       let aboveRight = keyBlock[row - 1][(col + 1) % width]
-      keyBlock[row][col] = (above + aboveRight) % 10
+      // mix any part of the key that went beyond sqrt(blocksize)
+      // into the resulting expanded key
+      keyBlock[row][col] = ((keyBlock[row][col] || 0) + (above + aboveRight)) % 10
     }
   }
 
@@ -61,8 +79,8 @@ function getKeyBlock (keyword, options = {}) {
   // process the provided key into
   // a key consumable by pockenacci
   const { blockSize, reverse } = Object.assign({}, options, DEFAULTS)
-  if (keyword.length !== Math.sqrt(blockSize)) {
-    throw new Error('keyword must have length ' + Math.sqrt(blockSize))
+  if (keyword.length < Math.sqrt(blockSize)) {
+    throw new Error('keyword must have length at least ' + Math.sqrt(blockSize))
   }
   const keyBlock = Object.freeze(
     expandKey(numberKey(keyword), blockSize).map(Object.freeze)

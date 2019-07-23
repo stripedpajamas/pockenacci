@@ -46,3 +46,23 @@ test('pads with X to block length', (t) => {
 
   t.is(plaintext, 'MESSAGEXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
 })
+
+test('supports keys > sqrt(blocksize)', (t) => {
+  const { encrypt, decrypt } = pockenacci
+  const { ciphertext, mac } = encrypt(
+    'MESSAGE', 'SECRETKEY'
+  )
+
+  t.is(ciphertext, '152Y2X1I23JX15232X152Y2XQ5232X15LK2X')
+  t.is(mac, '524106327190354410522440804406864917')
+
+  const { plaintext } = decrypt(ciphertext, mac, 'SECRETKEY')
+
+  t.is(plaintext, 'MESSAGEXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+})
+
+test('throws on keywords < sqrt(blocksize)', (t) => {
+  const { encrypt, decrypt } = pockenacci
+  t.throws(() => encrypt('anything', 'abc'))
+  t.throws(() => decrypt('anything', 'mac', 'abc'))
+})
