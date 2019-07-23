@@ -32,3 +32,17 @@ test('throws on invalid mac', (t) => {
     )
   })
 })
+
+test('pads with X to block length', (t) => {
+  const { encrypt, decrypt } = pockenacci
+  const { ciphertext, mac } = encrypt(
+    'MESSAGE', 'SECRET'
+  )
+
+  t.is(ciphertext.length, 36)
+  t.is(mac.length, 36)
+
+  const { plaintext } = decrypt(ciphertext, mac, 'SECRET')
+
+  t.is(plaintext, 'MESSAGEXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+})
