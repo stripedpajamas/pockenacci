@@ -14,7 +14,15 @@ function newBlock (blockSize) {
   return new Array(Math.sqrt(blockSize)).fill(0).map(_ => [])
 }
 
+function isRawNumeric (key) {
+  for (let x of key) {
+    if (isNaN(parseInt(x))) return false
+  }
+  return true
+}
+
 function numberKey (keyword) {
+  if (isRawNumeric(keyword)) return keyword.split('').map(Number)
   const sortedKey = keyword
     .split('')
     .map((letter, idx) => ({ letter, idx }))

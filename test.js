@@ -66,3 +66,13 @@ test('throws on keywords < sqrt(blocksize)', (t) => {
   t.throws(() => encrypt('anything', 'abc'))
   t.throws(() => decrypt('anything', 'mac', 'abc'))
 })
+
+test('accepts raw numeric keys', (t) => {
+  const { encrypt, decrypt } = pockenacci
+  const { ciphertext, mac } = encrypt('hello world', '000000')
+  t.is(ciphertext, 'HELLOWORLDXXXXXXXXXXXXXXXXXXXXXXXXXX')
+  t.is(mac, '000000000000000000000000000000000000')
+
+  const { plaintext } = decrypt(ciphertext, mac, '000000')
+  t.is(plaintext, 'HELLOWORLDXXXXXXXXXXXXXXXXXXXXXXXXXX')
+})
